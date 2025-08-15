@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SpellQuest • Spelling Practice (Grades 1–12)</title>
+  <style>
+    :root{
+      --bg1:#0f172a; /* slate-900 */
+      --bg2:#1e293b; /* slate-800 */
+      --acc:#a78bfa; /* violet-400 */
+      --acc2:#22d3ee; /* cyan-400 */
+      --good:#10b981; /* emerald-500 */
+      --bad:#ef4444; /* red-500 */
+      --text:#e5e7eb; /* gray-200 */
+      --muted:#94a3b8; /* slate-400 */
+      --card:#111827ee; /* translucent */
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      color:var(--text);
+      background: radial-gradient(1000px 700px at 10% 10%, #0b1227, var(--bg1) 50%),
+                  radial-gradient(1200px 900px at 90% 10%, #0b1a2a, var(--bg2) 40%),
+                  linear-gradient(180deg, #0a0f22, #0b1022);
+      overflow:hidden;
+    }
+
+    /* Floating letter canvas sits behind all content */
+    #lettersCanvas{position:fixed; inset:0; z-index:0}
+
+    /* Soft grid shimmer for subtle motion */
+    .grid-shimmer{
+      position:fixed; inset:-20vmax; z-index:0; opacity:.07; pointer-events:none;
+      background:
+        radial-gradient(circle at 50% 50%, transparent 0 15px, #ffffff0d 16px),
+        radial-gradient(circle at 50% 50%, transparent 0 15px, #ffffff0d 16px);
+      background-size:80px 80px, 80px 80px;
+      background-position:0 0, 40px 40px;
+      filter:blur(1px);
+      animation: drift 40s linear infinite;
+    }
+    @keyframes drift{from{transform:translate3d(0,0,0) rotate(0)} to{transform:translate3d(10px,10px,0) rotate(1turn)}}
+
+    /* App shell */
+    .wrap{position:relative; z-index:1; padding:24px; height:100%; display:grid; grid-template-rows:auto 1fr auto; gap:16px}
+    header{display:flex; gap:16px; align-items:center; justify-content:space-between}
+    .title{display:flex; gap:12px; align-items:center}
+    .logo{width:40px; height:40px; border-radius:12px; background:conic-gradient(from 0deg, var(--acc), var(--acc2), var(--acc)); box-shadow: 0 0 30px #22d3ee55}
+    h1{margin:0; font-size: clamp(20px, 2.5vw, 32px); letter-spacing:.4px}
+
+    .controls{display:flex; flex-wrap:wrap; gap:8px}
+    select, button, input[type="text"], textarea{
+      background:#0b1220; border:1px solid #233045; color:var(--text); border-radius:12px; padding:10px 12px; outline:none;
+      box-shadow: inset 0 0 0 1px #00000033, 0 4px 12px #00000033;
+    }
+    button{cursor:pointer; transition:.2s transform, .2s opacity; font-weight:600}
+    button:hover{transform:translateY(-1px)}
+    .pill{border-radius:999px}
+
+    .card{background:var(--card); border:1px solid #1f2937; border-radius:16px; padding:16px; box-shadow: 0 10px 25px #00000066}
+    main{display:grid; grid-template-columns: 1.2fr .8fr; gap:16px; min-height:0}
+    @media (max-width: 900px){ main{grid-template-columns:1fr} }
+
+    .tabs{display:flex; gap:6px; flex-wrap:wrap}
+    .tab{padding:8px 12px; border-radius:999px; border:1px solid #2a364b; background:#0b1220; cursor:pointer; opacity:.9}
+    .tab.active{background:linear-gradient(135deg, #151f33, #0b1220); box-shadow: inset 0 0 0 1px #334155, 0 0 0 2px #22d3ee44}
+
+    .prompt{font-size: clamp(18px, 2vw, 24px); font-weight:700; letter-spacing:.3px}
+    .feedback{min-height:24px}
+    .feedback.good{color:var(--good)}
+    .feedback.bad{color:var(--bad)}
+
+    .stats{display:flex; gap:12px; flex-wrap:wrap; color:var(--muted)}
+    .stat{padding:8px 10px; border:1px dashed #334155; border-radius:12px}
+
+    .wordlist{display:flex; flex-direction:column; gap:12px;}
+    .wordlist small{color:var(--muted)}
+    .list{display:flex; gap:8px; flex-wrap:wrap; max-height:160px; overflow:auto}
+    .chip{padding:6px 10px; border:1px solid #334155; border-radius:999px; background:#0b1220; font-size:14px}
+
+    .footer{display:flex; align-items:center; justify-content:space-between; gap:10px; color:var(--muted)}
+    .audio-ctrls{display:flex; gap:8px; align-items:center}
+
+    .sr-only{position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0}
+
+    /* Input style */
+    .answer{display:flex; gap:8px; align-items:center}
+    .answer input{flex:1; font-size:18px}
+
+    /* Confetti letters on correct */
+    .burst{position:fixed; left:0; top:0; pointer-events:none; mix-blend-mode:screen}
+  </style>
+</head>
+<body>
+  <canvas id="lettersCanvas" aria-hidden="true"></canvas>
+  <div class="grid-shimmer" aria-hidden="true"></div>
+
+  <div class="wrap">
+    <header>
+      <div class="title" role="banner">
+        <div class="logo" aria-hidden="true"></div>
+        <h1>SpellQuest <span style="color:var(--acc2);">•</span> Spelling Practice</h1>
+      </div>
+      <div class="controls" role="form" aria-label="Controls">
+        <label class="sr-only" for="grade">Grade level</label>
+        <select id="grade" title="Choose grade level">
+          <option value="1">1st Grade</option>
+          <option value="2">2nd Grade</option>
+          <option value="3">3rd Grade</option>
+          <option value="4" selected>4th Grade</option>
+          <option value="5">5th Grade</option>
+          <option value="6">6th Grade</option>
+          <option value="7">7th Grade</option>
+          <option value="8">8th Grade</option>
+          <option value="9">9th Grade</option>
+          <option value="10">10th Grade</option>
+          <option value="11">11th Grade</option>
+          <option value="12">12th Grade</option>
+        </select>
+        <button id="loadList" class="pill" title="Load words for this grade">Load Words</button>
+        <button id="start" class="pill" title="Start practice">Start</button>
+        <button id="hear" class="pill" title="Hear the word (TTS)">🔊 Hear</button>
+        <button id="skip" class="pill" title="Skip word">Skip</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="card" aria-labelledby="modeLabel">
+        <div class="tabs" role="tablist" aria-label="Practice Modes">
+          <button class="tab active" role="tab" aria-selected="true" data-mode="practice">Practice</button>
+          <button class="tab" role="tab" aria-selected="false" data-mode="bee">Spelling Bee</button>
+          <button class="tab" role="tab" aria-selected="false" data-mode="flash">Flashcards</button>
+        </div>
+        <hr style="border-color:#233045; opacity:.4" />
+        <div id="stage" aria-live="polite">
+          <div class="prompt" id="prompt">Choose a grade and press Start! 🌟</div>
+          <div class="answer" style="margin-top:12px">
+            <label class="sr-only" for="input">Type your spelling</label>
+            <input id="input" autocomplete="off" placeholder="Type the word…" disabled />
+            <button id="submit" class="pill">Check</button>
+          </div>
+          <div id="feedback" class="feedback" aria-live="assertive" style="margin-top:8px"></div>
+          <div class="stats" style="margin-top:10px">
+            <div class="stat">💡 Mode: <span id="modeName">Practice</span></div>
+            <div class="stat">✅ Correct: <span id="correct">0</span></div>
+            <div class="stat">🔥 Streak: <span id="streak">0</span></div>
+            <div class="stat">⏱️ Time: <span id="timer">00:00</span></div>
+          </div>
+        </div>
+      </section>
+
+      <aside class="card" aria-labelledby="listLabel">
+        <h3 id="listLabel" style="margin-top:0">Word List <small style="color:var(--muted)">(editable)</small></h3>
+        <div class="wordlist">
+          <div class="list" id="wordChips" aria-live="polite"></div>
+          <textarea id="editor" rows="6" placeholder="Paste or type your custom list, one word per line…"></textarea>
+          <div style="display:flex; gap:8px; flex-wrap:wrap">
+            <button id="applyList" class="pill">Use Custom List</button>
+            <button id="shuffle" class="pill">Shuffle</button>
+            <button id="clearStats" class="pill">Reset Stats</button>
+          </div>
+          <small>Tip: Save an MP3 named <code>music.mp3</code> in the same folder to enable background music below.</small>
+        </div>
+      </aside>
+    </main>
+
+    <div class="footer">
+      <div>Made for learners • Accessible • Works on GitHub Pages</div>
+      <div class="audio-ctrls">
+        <button id="musicToggle" class="pill" aria-pressed="false" title="Play / Pause music">🎵 Music</button>
+        <input id="vol" type="range" min="0" max="1" step="0.01" value="0.4" title="Music volume" />
+        <audio id="bgm" src="music.mp3" loop preload="none"></audio>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // =============================
+    // Data: sample grade word lists
+    // =============================
+    const SAMPLE_WORDS = {
+      1:["cat","dog","sun","book","ball","fish","hat","milk","rain","tree"],
+      2:["family","school","before","people","friend","happy","quiet","light","story","white"],
+      3:["because","another","between","enough","should","through","wonder","turtle","planet","circle"],
+      4:["adventure","dictionary","important","mystery","question","measure","problem","character","example","favorite"],
+      5:["argument","audience","barrier","category","develop","evidence","fraction","genuine","journal","resource"],
+      6:["adequate","analysis","approach","benefit","combat","complex","culture","design","feature","vary"],
+      7:["ambiguity","criteria","deduct","emphasize","hypothesis","inference","motivate","precede","resolve","structure"],
+      8:["allocate","anticipate","coherent","constrain","derive","fluctuate","integrate","mediate","paradigm","subsequent"],
+      9:["aesthetic","ambiguous","anecdote","camaraderie","capricious","conundrum","diligent","emulate","fortuitous","nonchalant"],
+      10:["benevolent","clairvoyant","compromise","deleterious","disdain","florid","impetuous","ostentatious","pragmatic","substantiate"],
+      11:["aberration","convergence","dissonance","ephemeral","equivocal","idiosyncrasy","perfidious","quixotic","reclusive","vindicate"],
+      12:["anachronistic","cognizant","demagogue","enervate","evanescent","obsequious","ostensible","perfunctory","salient","ubiquitous"]
+    };
+
+    // State
+    const state = {
+      words: [...SAMPLE_WORDS[4]],
+      index: 0,
+      mode: 'practice', // 'practice' | 'bee' | 'flash'
+      started: false,
+      correct: 0,
+      streak: 0,
+      startTime: null,
+      timerInt: null,
+    };
+
+    // Elements
+    const gradeSel = document.getElementById('grade');
+    const loadListBtn = document.getElementById('loadList');
+    const startBtn = document.getElementById('start');
+    const hearBtn = document.getElementById('hear');
+    const skipBtn = document.getElementById('skip');
+    const submitBtn = document.getElementById('submit');
+    const inputEl = document.getElementById('input');
+    const promptEl = document.getElementById('prompt');
+    const feedbackEl = document.getElementById('feedback');
+    const correctEl = document.getElementById('correct');
+    const streakEl = document.getElementById('streak');
+    const timerEl = document.getElementById('timer');
+    const modeNameEl = document.getElementById('modeName');
+    const wordChips = document.getElementById('wordChips');
+    const editor = document.getElementById('editor');
+    const applyListBtn = document.getElementById('applyList');
+    const shuffleBtn = document.getElementById('shuffle');
+    const clearStatsBtn = document.getElementById('clearStats');
+    const tabs = Array.from(document.querySelectorAll('.tab'));
+
+    const musicToggle = document.getElementById('musicToggle');
+    const vol = document.getElementById('vol');
+    const bgm = document.getElementById('bgm');
+
+    // Accessibility: announce text
+    function speak(text){
+      if(!('speechSynthesis' in window)) return;
+      const u = new SpeechSynthesisUtterance(text);
+      u.rate = 0.9; u.pitch = 1; u.volume = 1; u.lang = 'en-US';
+      speechSynthesis.cancel();
+      speechSynthesis.speak(u);
+    }
+
+    function saveProgress(){
+      const key = `spellquest-v1-grade-${gradeSel.value}`;
+      localStorage.setItem(key, JSON.stringify({correct: state.correct, streak: state.streak}));
+    }
+    function loadProgress(){
+      const key = `spellquest-v1-grade-${gradeSel.value}`;
+      const d = JSON.parse(localStorage.getItem(key)||'{}');
+      state.correct = d.correct||0; state.streak = d.streak||0;
+      correctEl.textContent = state.correct; streakEl.textContent = state.streak;
+    }
+
+    function renderList(){
+      wordChips.innerHTML = '';
+      state.words.forEach(w=>{
+        const div = document.createElement('div');
+        div.className='chip'; div.textContent = w;
+        wordChips.appendChild(div);
+      });
+      editor.value = state.words.join('\n');
+    }
+
+    function setMode(m){
+      state.mode = m;
+      modeNameEl.textContent = m === 'practice' ? 'Practice' : m === 'bee' ? 'Spelling Bee' : 'Flashcards';
+      tabs.forEach(t=>{ t.classList.toggle('active', t.dataset.mode===m); t.setAttribute('aria-selected', t.dataset.mode===m?'true':'false'); });
+      // Flashcards disable input typing
+      inputEl.disabled = (m==='flash');
+      submitBtn.textContent = m==='flash' ? 'Flip' : 'Check';
+      feedback('');
+    }
+
+    function start(){
+      state.started = true; state.index = 0; feedback('');
+      state.startTime = Date.now();
+      clearInterval(state.timerInt);
+      state.timerInt = setInterval(()=>{
+        const s = Math.floor((Date.now()-state.startTime)/1000);
+        const mm = String(Math.floor(s/60)).padStart(2,'0');
+        const ss = String(s%60).padStart(2,'0');
+        timerEl.textContent = `${mm}:${ss}`;
+      }, 500);
+      nextWord();
+      inputEl.focus();
+    }
+
+    function feedback(msg, kind){
+      feedbackEl.textContent = msg;
+      feedbackEl.className = 'feedback ' + (kind||'');
+    }
+
+    function currentWord(){ return state.words[state.index % state.words.length]; }
+
+    function nextWord(){
+      const w = currentWord();
+      if(state.mode==='flash'){
+        promptEl.textContent = '🔮 Definition/Hint: Think of the word…';
+      } else {
+        promptEl.textContent = 'Type the word you hear:';
+        speak(w);
+      }
+      inputEl.value='';
+      spawnBurst('✎');
+    }
+
+    function check(){
+      if(!state.started) return;
+      if(state.mode==='flash'){
+        // Flip to reveal
+        const w = currentWord();
+        const showing = promptEl.getAttribute('data-side')||'front';
+        if(showing==='front'){
+          promptEl.setAttribute('data-side','back');
+          promptEl.textContent = `Card: ${w}`;
+        } else {
+          promptEl.setAttribute('data-side','front');
+          promptEl.textContent = '🔮 Definition/Hint: Think of the word…';
+          state.index++; nextWord();
+        }
+        return;
+      }
+      const guess = (inputEl.value||'').trim().toLowerCase();
+      const w = currentWord();
+      if(!guess){ feedback('Type your answer, then press Check.'); return; }
+      if(guess === w.toLowerCase()){
+        feedback('Great job! ✅', 'good');
+        state.correct++; state.streak++; saveProgress();
+        correctEl.textContent = state.correct; streakEl.textContent = state.streak;
+        spawnBurst('✔');
+        state.index++;
+        setTimeout(nextWord, 450);
+      } else {
+        feedback(`Not quite. The word is "${w}". Try the next one!`, 'bad');
+        state.streak = 0; streakEl.textContent = state.streak; saveProgress();
+        spawnBurst('•');
+        if(state.mode==='bee'){
+          // In Bee mode, move missed words later to practice again
+          state.words.push(w);
+        }
+        state.index++;
+        setTimeout(nextWord, 650);
+      }
+    }
+
+    function shuffleList(){
+      for(let i=state.words.length-1;i>0;i--){
+        const j = Math.floor(Math.random()*(i+1));
+        [state.words[i], state.words[j]] = [state.words[j], state.words[i]];
+      }
+      renderList();
+    }
+
+    // Event wiring
+    loadListBtn.addEventListener('click',()=>{
+      const g = gradeSel.value;
+      state.words = [...(SAMPLE_WORDS[g]||[])];
+      if(state.words.length===0){
+        alert('No sample list for this grade yet. Paste your own in the editor!');
+      }
+      renderList();
+      loadProgress();
+    });
+    startBtn.addEventListener('click', start);
+    hearBtn.addEventListener('click', ()=>{
+      if(!state.started){ feedback('Press Start first.'); return; }
+      speak(currentWord());
+    });
+    skipBtn.addEventListener('click', ()=>{ if(!state.started) return; state.index++; nextWord(); });
+    submitBtn.addEventListener('click', check);
+    inputEl.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ e.preventDefault(); check(); } });
+
+    applyListBtn.addEventListener('click',()=>{
+      const lines = editor.value.split(/\n+/).map(s=>s.trim()).filter(Boolean);
+      if(lines.length===0){ alert('Add at least one word.'); return; }
+      state.words = lines; renderList();
+    });
+    shuffleBtn.addEventListener('click', shuffleList);
+    clearStatsBtn.addEventListener('click', ()=>{ state.correct=0; state.streak=0; saveProgress(); loadProgress(); feedback('Stats reset.'); });
+
+    tabs.forEach(t=> t.addEventListener('click', ()=> setMode(t.dataset.mode)));
+
+    // Music controls (requires user gesture)
+    musicToggle.addEventListener('click', async ()=>{
+      try{
+        if(bgm.paused){ await bgm.play(); musicToggle.setAttribute('aria-pressed','true'); }
+        else { bgm.pause(); musicToggle.setAttribute('aria-pressed','false'); }
+      }catch(err){ alert('Place a file named "music.mp3" next to this page on GitHub.'); }
+    });
+    vol.addEventListener('input', ()=> bgm.volume = parseFloat(vol.value));
+
+    // Initialize
+    renderList();
+    loadProgress();
+
+    // =============================
+    // Animated background: floating letters
+    // =============================
+    const canvas = document.getElementById('lettersCanvas');
+    const ctx = canvas.getContext('2d');
+    let W, H, letters = [];
+
+    function resize(){ W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; }
+    window.addEventListener('resize', resize); resize();
+
+    function makeLetter(){
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+      return {
+        ch: chars[Math.floor(Math.random()*chars.length)],
+        x: Math.random()*W,
+        y: -20 - Math.random()*H,
+        s: 12 + Math.random()*28, // size
+        v: 0.4 + Math.random()*0.9, // vertical speed
+        h: (Math.random()*0.6-0.3), // horizontal drift
+        a: 0.2 + Math.random()*0.8 // alpha
+      };
+    }
+    for(let i=0;i<120;i++) letters.push(makeLetter());
+
+    function tick(){
+      ctx.clearRect(0,0,W,H);
+      // soft vignette
+      const grd = ctx.createRadialGradient(W/2,H/2,10, W/2,H/2, Math.max(W,H));
+      grd.addColorStop(0,'rgba(167,139,250,0.02)');
+      grd.addColorStop(1,'rgba(0,0,0,0)');
+      ctx.fillStyle = grd; ctx.fillRect(0,0,W,H);
+
+      letters.forEach(l=>{
+        l.y += l.v; l.x += l.h; l.a -= 0.0008; if(l.a<0.05){ Object.assign(l, makeLetter(), {y:-10}); }
+        ctx.globalAlpha = Math.max(0,l.a);
+        ctx.font = `${l.s}px ui-sans-serif, system-ui, -apple-system`;
+        ctx.fillStyle = '#a78bfa';
+        ctx.fillText(l.ch, l.x, l.y);
+      });
+      ctx.globalAlpha = 1;
+      requestAnimationFrame(tick);
+    }
+    tick();
+
+    // Celebration bursts with letter particles
+    function spawnBurst(symbol){
+      const c = document.createElement('canvas'); c.className='burst'; c.width=window.innerWidth; c.height=window.innerHeight; document.body.appendChild(c);
+      const cx = c.getContext('2d');
+      const P=[]; const N=40; const x = window.innerWidth/2, y = 140; // near prompt
+      for(let i=0;i<N;i++){
+        const ang = (Math.PI*2)*Math.random();
+        P.push({x, y, vx: Math.cos(ang)*(1+Math.random()*3), vy: Math.sin(ang)*(1+Math.random()*3)-1, a:1, s: 14+Math.random()*10});
+      }
+      const anim = ()=>{
+        cx.clearRect(0,0,c.width,c.height);
+        P.forEach(p=>{
+          p.x += p.vx; p.y += p.vy; p.vy += 0.03; p.a -= 0.02;
+          cx.globalAlpha = Math.max(0,p.a);
+          cx.font = `${p.s}px ui-sans-serif`; cx.fillStyle = '#22d3ee';
+          cx.fillText(symbol, p.x, p.y);
+        });
+        if(P.every(p=>p.a<=0)){ c.remove(); return; }
+        requestAnimationFrame(anim);
+      };
+      anim();
+    }
+  </script>
+</body>
+</html>
