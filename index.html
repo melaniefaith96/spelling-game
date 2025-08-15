@@ -7,8 +7,8 @@
 <style>
     body {
         font-family: Arial, sans-serif;
-        background: linear-gradient(135deg, #0b1220, #1e293b);
-        color: #fff;
+        background: linear-gradient(135deg, #b3ecff, #e6ffe6);
+        color: #333;
         height: 100vh;
         margin: 0;
         display: flex;
@@ -18,18 +18,22 @@
     }
     h1 {
         margin-bottom: 10px;
+        color: #004466;
     }
     select {
         padding: 8px;
         font-size: 16px;
         margin-bottom: 20px;
+        border-radius: 6px;
+        border: 1px solid #ccc;
     }
     .bee-container {
         text-align: center;
-        background: rgba(255,255,255,0.05);
+        background: rgba(255,255,255,0.8);
         padding: 20px;
         border-radius: 12px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        width: 280px;
     }
     .prompt {
         font-size: 2rem;
@@ -41,7 +45,7 @@
         width: 200px;
         text-align: center;
         border-radius: 6px;
-        border: none;
+        border: 1px solid #ccc;
         margin-bottom: 10px;
     }
     button {
@@ -61,6 +65,12 @@
         font-size: 1.2rem;
         margin-top: 10px;
         font-weight: bold;
+    }
+    canvas {
+        position: fixed;
+        top: 0;
+        left: 0;
+        pointer-events: none;
     }
 </style>
 </head>
@@ -86,6 +96,18 @@
     </div>
 </div>
 
+<audio id="bgMusic" loop>
+    <source src="https://cdn.pixabay.com/download/audio/2021/09/30/audio_47e37ad3f0.mp3?filename=relaxing-background-music-11704.mp3" type="audio/mpeg">
+</audio>
+<audio id="correctSound">
+    <source src="https://cdn.pixabay.com/download/audio/2022/03/10/audio_3e7f6821b5.mp3?filename=correct-2-46134.mp3" type="audio/mpeg">
+</audio>
+<audio id="wrongSound">
+    <source src="https://cdn.pixabay.com/download/audio/2022/03/10/audio_a1a5d2b454.mp3?filename=wrong-47985.mp3" type="audio/mpeg">
+</audio>
+
+<canvas id="confetti"></canvas>
+
 <script>
 const SAMPLE_WORDS = {
     1: ["cat", "dog", "sun", "hat", "red"],
@@ -107,9 +129,14 @@ const feedbackEl = document.getElementById("feedback");
 const correctEl = document.getElementById("correct");
 const streakEl = document.getElementById("streak");
 
+const bgMusic = document.getElementById("bgMusic");
+const correctSound = document.getElementById("correctSound");
+const wrongSound = document.getElementById("wrongSound");
+
 gradeSel.addEventListener("change", () => {
     const grade = gradeSel.value;
     if (SAMPLE_WORDS[grade]) {
+        bgMusic.play();
         state.words = SAMPLE_WORDS[grade].slice();
         state.index = 0;
         state.correct = 0;
@@ -139,16 +166,19 @@ function checkWord() {
     const userWord = answerEl.value.trim().toLowerCase();
     if (userWord === currentWord.toLowerCase()) {
         feedbackEl.textContent = "✅ Correct!";
+        correctSound.play();
+        startConfetti();
         state.correct++;
         state.streak++;
     } else {
         feedbackEl.textContent = `❌ Incorrect! It was "${currentWord}"`;
+        wrongSound.play();
         state.streak = 0;
     }
     correctEl.textContent = state.correct;
     streakEl.textContent = state.streak;
     state.index++;
-    setTimeout(nextWord, 1000);
+    setTimeout(nextWord, 1500);
 }
 
 function speak(text) {
@@ -158,9 +188,49 @@ function speak(text) {
         window.speechSynthesis.speak(utterance);
     }
 }
+
+// 🎉 Simple Confetti Animation
+const canvas = document.getElementById('confetti');
+const ctx = canvas.getContext('2d');
+let confettiParticles = [];
+
+function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+function startConfetti() {
+    confettiParticles = [];
+    for (let i = 0; i < 100; i++) {
+        confettiParticles.push({
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height - canvas.height,
+            r: Math.random() * 6 + 2,
+            d: Math.random() * 0.5 + 1,
+            color: `hsl(${Math.random() * 360}, 100%, 50%)`,
+            tilt: Math.random() * 10 - 10
+        });
+    }
+    requestAnimationFrame(drawConfetti);
+    setTimeout(() => confettiParticles = [], 1500);
+}
+
+function drawConfetti() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    confettiParticles.forEach(p => {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fillStyle = p.color;
+        ctx.fill();
+        p.y += p.d * 4;
+        p.x += Math.sin(p.tilt) * 2;
+        p.tilt += 0.05;
+    });
+    if (confettiParticles.length) requestAnimationFrame(drawConfetti);
+}
 </script>
 
 </body>
 </html>
-
-
