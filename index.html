@@ -6,8 +6,8 @@
 <title>Spelling Bee</title>
 <style>
     body {
-        font-family: Arial, sans-serif;
-        background: linear-gradient(135deg, #b3ecff, #e6ffe6);
+        font-family: Comic Sans MS, cursive, sans-serif;
+        background: linear-gradient(135deg, #ffeb99, #aee6ff);
         color: #333;
         height: 100vh;
         margin: 0;
@@ -18,53 +18,62 @@
     }
     h1 {
         margin-bottom: 10px;
-        color: #004466;
+        color: #ff6600;
+        text-shadow: 1px 1px #fff;
     }
     select {
         padding: 8px;
-        font-size: 16px;
+        font-size: 18px;
         margin-bottom: 20px;
-        border-radius: 6px;
-        border: 1px solid #ccc;
+        border-radius: 8px;
+        border: 2px solid #ffcc00;
+        background: #fff8dc;
+        cursor: pointer;
     }
     .bee-container {
+        display: none; /* Hidden until grade selected */
         text-align: center;
-        background: rgba(255,255,255,0.8);
-        padding: 20px;
-        border-radius: 12px;
+        background: rgba(255,255,255,0.9);
+        padding: 25px;
+        border-radius: 16px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-        width: 280px;
-    }
-    .prompt {
-        font-size: 2rem;
-        margin-bottom: 15px;
+        width: 300px;
     }
     input {
         padding: 10px;
-        font-size: 1rem;
+        font-size: 1.1rem;
         width: 200px;
         text-align: center;
-        border-radius: 6px;
-        border: 1px solid #ccc;
+        border-radius: 8px;
+        border: 2px solid #ffcc00;
         margin-bottom: 10px;
     }
     button {
-        padding: 10px 16px;
+        padding: 10px 18px;
         font-size: 1rem;
-        background: #3498db;
+        background: #4CAF50;
         color: #fff;
         border: none;
-        border-radius: 6px;
+        border-radius: 8px;
         cursor: pointer;
+    }
+    button:hover {
+        background: #45a049;
     }
     .stats {
         margin-top: 15px;
         font-size: 1rem;
     }
     .feedback {
-        font-size: 1.2rem;
+        font-size: 1.4rem;
         margin-top: 10px;
         font-weight: bold;
+    }
+    .yay {
+        color: #28a745;
+    }
+    .try-again {
+        color: #d9534f;
     }
     canvas {
         position: fixed;
@@ -76,16 +85,17 @@
 </head>
 <body>
 
-<h1>Spelling Bee</h1>
+<h1>Spelling Bee 🐝</h1>
 <select id="gradeSel">
     <option value="">Select Grade</option>
     <option value="1">Grade 1</option>
     <option value="2">Grade 2</option>
     <option value="3">Grade 3</option>
+    <option value="4">Grade 4</option>
+    <option value="5">Grade 5</option>
 </select>
 
-<div class="bee-container">
-    <div class="prompt" id="prompt">Press grade to start</div>
+<div class="bee-container" id="beeContainer">
     <input id="answer" placeholder="Type spelling..." autocomplete="off" />
     <br>
     <button id="submitBtn">Submit</button>
@@ -97,38 +107,34 @@
 </div>
 
 <audio id="bgMusic" loop>
-    <source src="https://cdn.pixabay.com/download/audio/2021/09/30/audio_47e37ad3f0.mp3?filename=relaxing-background-music-11704.mp3" type="audio/mpeg">
+    <source src="https://cdn.pixabay.com/download/audio/2024/04/21/audio_36b773587a.mp3?filename=gentle-happy-kids-background-music-205892.mp3" type="audio/mpeg">
 </audio>
 <audio id="correctSound">
-    <source src="https://cdn.pixabay.com/download/audio/2022/03/10/audio_3e7f6821b5.mp3?filename=correct-2-46134.mp3" type="audio/mpeg">
+    <source src="https://cdn.pixabay.com/download/audio/2023/04/20/audio_8825c1b298.mp3?filename=kids-cheer-146777.mp3" type="audio/mpeg">
 </audio>
 <audio id="wrongSound">
-    <source src="https://cdn.pixabay.com/download/audio/2022/03/10/audio_a1a5d2b454.mp3?filename=wrong-47985.mp3" type="audio/mpeg">
+    <source src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_6dbed99bfc.mp3?filename=cartoon-fail-trumpet-146419.mp3" type="audio/mpeg">
 </audio>
 
 <canvas id="confetti"></canvas>
 
 <script>
 const SAMPLE_WORDS = {
-    1: ["cat", "dog", "sun", "hat", "red"],
-    2: ["apple", "banana", "orange", "grape", "cherry"],
-    3: ["elephant", "giraffe", "dolphin", "kangaroo", "penguin"]
+    1: ["cat", "dog", "sun", "hat", "red", "book", "fish", "car", "run", "jump"],
+    2: ["apple", "banana", "orange", "grape", "cherry", "school", "chair", "bread", "house", "water"],
+    3: ["elephant", "giraffe", "dolphin", "kangaroo", "penguin", "computer", "pencil", "garden", "planet", "rocket"],
+    4: ["beautiful", "mountain", "holiday", "library", "science", "friendship", "dangerous", "engineer", "history", "language"],
+    5: ["extraordinary", "environment", "imagination", "universe", "adventure", "knowledge", "volunteer", "exploration", "community", "responsibility"]
 };
 
-let state = {
-    words: [],
-    index: 0,
-    correct: 0,
-    streak: 0
-};
+let state = { words: [], index: 0, correct: 0, streak: 0 };
 
 const gradeSel = document.getElementById("gradeSel");
-const promptEl = document.getElementById("prompt");
+const beeContainer = document.getElementById("beeContainer");
 const answerEl = document.getElementById("answer");
 const feedbackEl = document.getElementById("feedback");
 const correctEl = document.getElementById("correct");
 const streakEl = document.getElementById("streak");
-
 const bgMusic = document.getElementById("bgMusic");
 const correctSound = document.getElementById("correctSound");
 const wrongSound = document.getElementById("wrongSound");
@@ -141,6 +147,8 @@ gradeSel.addEventListener("change", () => {
         state.index = 0;
         state.correct = 0;
         state.streak = 0;
+        gradeSel.style.display = "none";
+        beeContainer.style.display = "block";
         nextWord();
     }
 });
@@ -155,7 +163,6 @@ function nextWord() {
         state.index = 0;
     }
     const word = state.words[state.index];
-    promptEl.textContent = "Spell: " + word;
     speak(word);
     answerEl.value = "";
     feedbackEl.textContent = "";
@@ -165,31 +172,34 @@ function checkWord() {
     const currentWord = state.words[state.index];
     const userWord = answerEl.value.trim().toLowerCase();
     if (userWord === currentWord.toLowerCase()) {
-        feedbackEl.textContent = "✅ Correct!";
+        feedbackEl.textContent = "Yay! 🎉";
+        feedbackEl.className = "feedback yay";
         correctSound.play();
         startConfetti();
         state.correct++;
         state.streak++;
     } else {
-        feedbackEl.textContent = `❌ Incorrect! It was "${currentWord}"`;
+        feedbackEl.textContent = "Try again! ❌";
+        feedbackEl.className = "feedback try-again";
         wrongSound.play();
         state.streak = 0;
     }
     correctEl.textContent = state.correct;
     streakEl.textContent = state.streak;
     state.index++;
-    setTimeout(nextWord, 1500);
+    setTimeout(nextWord, 2000);
 }
 
 function speak(text) {
     if ('speechSynthesis' in window) {
         const utterance = new SpeechSynthesisUtterance(text);
-        utterance.rate = 0.8;
+        utterance.rate = 0.7; // slower for kids
+        utterance.pitch = 1.2; // friendlier tone
         window.speechSynthesis.speak(utterance);
     }
 }
 
-// 🎉 Simple Confetti Animation
+// 🎉 Confetti Animation
 const canvas = document.getElementById('confetti');
 const ctx = canvas.getContext('2d');
 let confettiParticles = [];
@@ -234,3 +244,4 @@ function drawConfetti() {
 
 </body>
 </html>
+
