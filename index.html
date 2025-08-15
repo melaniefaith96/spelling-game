@@ -1,382 +1,166 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>SpellQuest • Spelling Bee</title>
-  <style>
-    :root{
-      --bg1:#0f172a; --bg2:#1e293b;
-      --acc:#a78bfa; --acc2:#22d3ee;
-      --good:#10b981; --bad:#ef4444;
-      --text:#e5e7eb; --muted:#94a3b8; --card:#111827ee;
-      --surface:#0b1220; --border:#233045; --chip:#334155;
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Spelling Bee</title>
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        background: linear-gradient(135deg, #0b1220, #1e293b);
+        color: #fff;
+        height: 100vh;
+        margin: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
     }
-    *{box-sizing:border-box}
-    html,body{height:100%}
-    body{
-      margin:0; font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
-      color:var(--text);
-      background: radial-gradient(1000px 700px at 10% 10%, #0b1227, var(--bg1) 50%),
-                  radial-gradient(1200px 900px at 90% 10%, #0b1a2a, var(--bg2) 40%),
-                  linear-gradient(180deg, #0a0f22, #0b1022);
-      overflow:hidden;
+    h1 {
+        margin-bottom: 10px;
     }
-    #lettersCanvas{position:fixed; inset:0; z-index:0}
-    .grid-shimmer{
-      position:fixed; inset:-20vmax; z-index:0; opacity:.07; pointer-events:none;
-      background:
-        radial-gradient(circle at 50% 50%, transparent 0 15px, #ffffff0d 16px),
-        radial-gradient(circle at 50% 50%, transparent 0 15px, #ffffff0d 16px);
-      background-size:80px 80px, 80px 80px;
-      background-position:0 0, 40px 40px;
-      filter:blur(1px);
-      animation: drift 40s linear infinite;
+    select {
+        padding: 8px;
+        font-size: 16px;
+        margin-bottom: 20px;
     }
-    @keyframes drift{from{transform:translate3d(0,0,0) rotate(0)} to{transform:translate3d(10px,10px,0) rotate(1turn)}}
-
-    /* App shell */
-    .wrap{position:relative; z-index:1; height:100%; padding:20px; display:grid; grid-template-rows:auto 1fr auto; gap:16px}
-    header{display:flex; gap:16px; align-items:center; justify-content:space-between}
-    .title{display:flex; gap:12px; align-items:center}
-    .logo{width:40px; height:40px; border-radius:12px; background:conic-gradient(from 0deg, var(--acc), var(--acc2), var(--acc)); box-shadow:0 0 30px #22d3ee55}
-    h1{margin:0; font-size:clamp(20px,2.5vw,32px); letter-spacing:.4px}
-
-    /* Center stage card */
-    main{display:grid; place-items:center; min-height:0}
-    .stage-card{
-      width:min(900px, 92vw);
-      background:var(--card);
-      border:1px solid #1f2937;
-      border-radius:16px;
-      padding:24px;
-      box-shadow:0 10px 25px #00000066;
-      display:grid; gap:14px; justify-items:center; text-align:center;
+    .bee-container {
+        text-align: center;
+        background: rgba(255,255,255,0.05);
+        padding: 20px;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.4);
     }
-
-    .controls{display:flex; gap:8px; align-items:center; flex-wrap:wrap; justify-content:center}
-    select, button, input[type="text"]{
-      background:var(--surface); border:1px solid var(--border); color:var(--text); border-radius:12px; padding:10px 12px; outline:none;
-      box-shadow: inset 0 0 0 1px #00000033, 0 4px 12px #00000033;
+    .prompt {
+        font-size: 2rem;
+        margin-bottom: 15px;
     }
-    button{cursor:pointer; transition:.2s transform, .2s opacity; font-weight:600}
-    button:hover{transform:translateY(-1px)}
-    .pill{border-radius:999px}
-
-    .prompt{font-size:clamp(20px,2.2vw,28px); font-weight:800; letter-spacing:.3px}
-    .answer{display:flex; gap:8px; align-items:center; width:100%; max-width:560px}
-    .answer input{flex:1; font-size:18px}
-
-    .feedback{min-height:24px}
-    .feedback.good{color:var(--good)}
-    .feedback.bad{color:var(--bad)}
-
-    .stats{display:flex; gap:12px; flex-wrap:wrap; color:var(--muted); justify-content:center}
-    .stat{padding:8px 10px; border:1px dashed #334155; border-radius:12px}
-
-    .footer{display:flex; align-items:center; justify-content:space-between; gap:10px; color:var(--muted); font-size:14px}
-    .audio-ctrls{display:flex; gap:8px; align-items:center}
-
-    .sr-only{position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0}
-    .burst{position:fixed; left:0; top:0; pointer-events:none; mix-blend-mode:screen}
-  </style>
+    input {
+        padding: 10px;
+        font-size: 1rem;
+        width: 200px;
+        text-align: center;
+        border-radius: 6px;
+        border: none;
+        margin-bottom: 10px;
+    }
+    button {
+        padding: 10px 16px;
+        font-size: 1rem;
+        background: #3498db;
+        color: #fff;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+    }
+    .stats {
+        margin-top: 15px;
+        font-size: 1rem;
+    }
+    .feedback {
+        font-size: 1.2rem;
+        margin-top: 10px;
+        font-weight: bold;
+    }
+</style>
 </head>
 <body>
-  <canvas id="lettersCanvas" aria-hidden="true"></canvas>
-  <div class="grid-shimmer" aria-hidden="true"></div>
 
-  <div class="wrap">
-    <header>
-      <div class="title" role="banner">
-        <div class="logo" aria-hidden="true"></div>
-        <h1>SpellQuest <span style="color:var(--acc2)">•</span> Spelling Bee</h1>
-      </div>
-      <div class="controls" role="form" aria-label="Controls">
-        <label class="sr-only" for="grade">Grade level</label>
-        <select id="grade" title="Choose grade level">
-          <option value="1">1st Grade</option>
-          <option value="2">2nd Grade</option>
-          <option value="3">3rd Grade</option>
-          <option value="4" selected>4th Grade</option>
-          <option value="5">5th Grade</option>
-          <option value="6">6th Grade</option>
-          <option value="7">7th Grade</option>
-          <option value="8">8th Grade</option>
-          <option value="9">9th Grade</option>
-          <option value="10">10th Grade</option>
-          <option value="11">11th Grade</option>
-          <option value="12">12th Grade</option>
-        </select>
-        <button id="hear" class="pill" title="Hear the word (TTS)">🔊 Hear</button>
-        <button id="skip" class="pill" title="Skip word">Skip</button>
-      </div>
-    </header>
+<h1>Spelling Bee</h1>
+<select id="gradeSel">
+    <option value="">Select Grade</option>
+    <option value="1">Grade 1</option>
+    <option value="2">Grade 2</option>
+    <option value="3">Grade 3</option>
+</select>
 
-    <main>
-      <section class="stage-card" aria-live="polite">
-        <div class="prompt" id="prompt">Pick a grade to begin the bee! 🐝</div>
-
-        <div class="answer">
-          <label class="sr-only" for="input">Type your spelling</label>
-          <input id="input" autocomplete="off" placeholder="Type the word…" />
-          <button id="submit" class="pill">Check</button>
-        </div>
-
-        <div id="feedback" class="feedback" aria-live="assertive"></div>
-
-        <div class="stats">
-          <div class="stat">🎓 Grade: <span id="gradeName">4th</span></div>
-          <div class="stat">✅ Correct: <span id="correct">0</span></div>
-          <div class="stat">🔥 Streak: <span id="streak">0</span></div>
-          <div class="stat">⏱️ Time: <span id="timer">00:00</span></div>
-        </div>
-      </section>
-    </main>
-
-    <div class="footer">
-      <div>Spelling Bee • Accessible • GitHub Pages friendly</div>
-      <div class="audio-ctrls">
-        <button id="musicToggle" class="pill" aria-pressed="false" title="Play / Pause music">🎵 Music</button>
-        <input id="vol" type="range" min="0" max="1" step="0.01" value="0.4" title="Music volume" />
-        <audio id="bgm" src="music.mp3" loop preload="none"></audio>
-      </div>
+<div class="bee-container">
+    <div class="prompt" id="prompt">Press grade to start</div>
+    <input id="answer" placeholder="Type spelling..." autocomplete="off" />
+    <br>
+    <button id="submitBtn">Submit</button>
+    <div class="feedback" id="feedback"></div>
+    <div class="stats">
+        Correct: <span id="correct">0</span> |
+        Streak: <span id="streak">0</span>
     </div>
-  </div>
+</div>
 
-  <script>
-    // =============================
-    // Data: sample grade word lists
-    // =============================
-    const SAMPLE_WORDS = {
-      1:["cat","dog","sun","book","ball","fish","hat","milk","rain","tree"],
-      2:["family","school","before","people","friend","happy","quiet","light","story","white"],
-      3:["because","another","between","enough","should","through","wonder","turtle","planet","circle"],
-      4:["adventure","dictionary","important","mystery","question","measure","problem","character","example","favorite"],
-      5:["argument","audience","barrier","category","develop","evidence","fraction","genuine","journal","resource"],
-      6:["adequate","analysis","approach","benefit","combat","complex","culture","design","feature","vary"],
-      7:["ambiguity","criteria","deduct","emphasize","hypothesis","inference","motivate","precede","resolve","structure"],
-      8:["allocate","anticipate","coherent","constrain","derive","fluctuate","integrate","mediate","paradigm","subsequent"],
-      9:["aesthetic","ambiguous","anecdote","camaraderie","capricious","conundrum","diligent","emulate","fortuitous","nonchalant"],
-      10:["benevolent","clairvoyant","compromise","deleterious","disdain","florid","impetuous","ostentatious","pragmatic","substantiate"],
-      11:["aberration","convergence","dissonance","ephemeral","equivocal","idiosyncrasy","perfidious","quixotic","reclusive","vindicate"],
-      12:["anachronistic","cognizant","demagogue","enervate","evanescent","obsequious","ostensible","perfunctory","salient","ubiquitous"]
-    };
+<script>
+const SAMPLE_WORDS = {
+    1: ["cat", "dog", "sun", "hat", "red"],
+    2: ["apple", "banana", "orange", "grape", "cherry"],
+    3: ["elephant", "giraffe", "dolphin", "kangaroo", "penguin"]
+};
 
-    // State (Bee-only)
-    const state = {
-      words: [...SAMPLE_WORDS[4]],
-      index: 0,
-      started: false,
-      correct: 0,
-      streak: 0,
-      startTime: null,
-      timerInt: null,
-    };
+let state = {
+    words: [],
+    index: 0,
+    correct: 0,
+    streak: 0
+};
 
-    // Elements
-    const $ = id => document.getElementById(id);
-    const gradeSel = $('grade');
-    const hearBtn = $('hear');
-    const skipBtn = $('skip');
-    const submitBtn = $('submit');
-    const inputEl = $('input');
-    const promptEl = $('prompt');
-    const feedbackEl = $('feedback');
-    const correctEl = $('correct');
-    const streakEl = $('streak');
-    const timerEl = $('timer');
-    const gradeNameEl = $('gradeName');
-    const musicToggle = $('musicToggle');
-    const vol = $('vol');
-    const bgm = $('bgm');
+const gradeSel = document.getElementById("gradeSel");
+const promptEl = document.getElementById("prompt");
+const answerEl = document.getElementById("answer");
+const feedbackEl = document.getElementById("feedback");
+const correctEl = document.getElementById("correct");
+const streakEl = document.getElementById("streak");
 
-    // Accessibility: announce text (Web Speech API)
-    function speak(text){
-      if(!('speechSynthesis' in window)) return;
-      const u = new SpeechSynthesisUtterance(text);
-      u.rate = 0.9; u.pitch = 1; u.volume = 1; u.lang = 'en-US';
-      speechSynthesis.cancel();
-      speechSynthesis.speak(u);
+gradeSel.addEventListener("change", () => {
+    const grade = gradeSel.value;
+    if (SAMPLE_WORDS[grade]) {
+        state.words = SAMPLE_WORDS[grade].slice();
+        state.index = 0;
+        state.correct = 0;
+        state.streak = 0;
+        nextWord();
     }
+});
 
-    function saveProgress(){
-      const key = `spellquest-bee-v1-grade-${gradeSel.value}`;
-      localStorage.setItem(key, JSON.stringify({correct: state.correct, streak: state.streak}));
+document.getElementById("submitBtn").addEventListener("click", checkWord);
+answerEl.addEventListener("keydown", e => {
+    if (e.key === "Enter") checkWord();
+});
+
+function nextWord() {
+    if (state.index >= state.words.length) {
+        state.index = 0;
     }
-    function loadProgress(){
-      const key = `spellquest-bee-v1-grade-${gradeSel.value}`;
-      const d = JSON.parse(localStorage.getItem(key)||'{}');
-      state.correct = d.correct||0; state.streak = d.streak||0;
-      correctEl.textContent = state.correct; streakEl.textContent = state.streak;
+    const word = state.words[state.index];
+    promptEl.textContent = "Spell: " + word;
+    speak(word);
+    answerEl.value = "";
+    feedbackEl.textContent = "";
+}
+
+function checkWord() {
+    const currentWord = state.words[state.index];
+    const userWord = answerEl.value.trim().toLowerCase();
+    if (userWord === currentWord.toLowerCase()) {
+        feedbackEl.textContent = "✅ Correct!";
+        state.correct++;
+        state.streak++;
+    } else {
+        feedbackEl.textContent = `❌ Incorrect! It was "${currentWord}"`;
+        state.streak = 0;
     }
+    correctEl.textContent = state.correct;
+    streakEl.textContent = state.streak;
+    state.index++;
+    setTimeout(nextWord, 1000);
+}
 
-    function setWordsForGrade(g){
-      state.words = [...(SAMPLE_WORDS[g]||[])];
-      gradeNameEl.textContent = g.endsWith ? g : (
-        g==1?'1st':g==2?'2nd':g==3?'3rd':g+'th'
-      );
-      // Fallback if somehow empty
-      if(state.words.length===0){
-        state.words = ['spell','practice','bee'];
-      }
+function speak(text) {
+    if ('speechSynthesis' in window) {
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.rate = 0.8;
+        window.speechSynthesis.speak(utterance);
     }
+}
+</script>
 
-    function feedback(msg, kind){
-      feedbackEl.textContent = msg;
-      feedbackEl.className = 'feedback ' + (kind||'');
-    }
-
-    function currentWord(){ return state.words[state.index % state.words.length]; }
-
-    function nextWord(){
-      const w = currentWord();
-      promptEl.textContent = 'Type the word you hear:';
-      inputEl.value='';
-      inputEl.focus();
-      speak(w);
-      spawnBurst('✎');
-    }
-
-    function startBee(){
-      state.started = true; state.index = 0; feedback('');
-      // Timer
-      state.startTime = Date.now();
-      clearInterval(state.timerInt);
-      state.timerInt = setInterval(()=>{
-        const s = Math.floor((Date.now()-state.startTime)/1000);
-        const mm = String(Math.floor(s/60)).padStart(2,'0');
-        const ss = String(s%60).padStart(2,'0');
-        timerEl.textContent = `${mm}:${ss}`;
-      }, 500);
-      loadProgress();
-      nextWord();
-    }
-
-    function check(){
-      if(!state.started) return;
-      const guess = (inputEl.value||'').trim().toLowerCase();
-      const w = currentWord();
-      if(!guess){ feedback('Type your answer, then press Check.'); return; }
-      if(guess === w.toLowerCase()){
-        feedback('Great job! ✅', 'good');
-        state.correct++; state.streak++;
-        correctEl.textContent = state.correct; streakEl.textContent = state.streak;
-        saveProgress();
-        spawnBurst('✔');
-        state.index++;
-        setTimeout(nextWord, 450);
-      } else {
-        feedback(`Not quite. The word is "${w}". Try the next one!`, 'bad');
-        state.streak = 0; streakEl.textContent = state.streak; saveProgress();
-        spawnBurst('•');
-        // Bee mode: re-queue missed word
-        state.words.push(w);
-        state.index++;
-        setTimeout(nextWord, 650);
-      }
-    }
-
-    function shuffleListInPlace(){
-      for(let i=state.words.length-1;i>0;i--){
-        const j=Math.floor(Math.random()*(i+1));
-        [state.words[i], state.words[j]] = [state.words[j], state.words[i]];
-      }
-    }
-
-    // Events
-    submitBtn.addEventListener('click', check);
-    inputEl.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); check(); }});
-    hearBtn.addEventListener('click', ()=>{ if(!state.started){ feedback('Pick a grade first.'); return; } speak(currentWord()); });
-    skipBtn.addEventListener('click', ()=>{ if(!state.started) return; state.index++; nextWord(); });
-
-    gradeSel.addEventListener('change', ()=>{
-      setWordsForGrade(gradeSel.value);
-      shuffleListInPlace();
-      startBee();
-    });
-
-    // Music controls (requires user gesture)
-    musicToggle.addEventListener('click', async ()=>{
-      try{
-        if(bgm.paused){ await bgm.play(); musicToggle.setAttribute('aria-pressed','true'); }
-        else { bgm.pause(); musicToggle.setAttribute('aria-pressed','false'); }
-      }catch(err){ alert('Place a file named "music.mp3" next to this page on GitHub.'); }
-    });
-    vol.addEventListener('input', ()=> bgm.volume = parseFloat(vol.value));
-
-    // Init: start immediately for default grade
-    (function init(){
-      setWordsForGrade(gradeSel.value);
-      shuffleListInPlace();
-      startBee();
-    })();
-
-    // =============================
-    // Animated background: floating letters
-    // =============================
-    const canvas = document.getElementById('lettersCanvas');
-    const ctx = canvas.getContext('2d');
-    let W, H, letters = [];
-
-    function resize(){ W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; }
-    window.addEventListener('resize', resize); resize();
-
-    function makeLetter(){
-      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-      return {
-        ch: chars[Math.floor(Math.random()*chars.length)],
-        x: Math.random()*W,
-        y: -20 - Math.random()*H,
-        s: 12 + Math.random()*28,
-        v: 0.4 + Math.random()*0.9,
-        h: (Math.random()*0.6-0.3),
-        a: 0.2 + Math.random()*0.8
-      };
-    }
-    for(let i=0;i<120;i++) letters.push(makeLetter());
-
-    function tick(){
-      ctx.clearRect(0,0,W,H);
-      const grd = ctx.createRadialGradient(W/2,H/2,10, W/2,H/2, Math.max(W,H));
-      grd.addColorStop(0,'rgba(167,139,250,0.02)');
-      grd.addColorStop(1,'rgba(0,0,0,0)');
-      ctx.fillStyle = grd; ctx.fillRect(0,0,W,H);
-
-      letters.forEach(l=>{
-        l.y += l.v; l.x += l.h; l.a -= 0.0008; if(l.a<0.05){ Object.assign(l, makeLetter(), {y:-10}); }
-        ctx.globalAlpha = Math.max(0,l.a);
-        ctx.font = `${l.s}px ui-sans-serif, system-ui, -apple-system`;
-        ctx.fillStyle = '#a78bfa';
-        ctx.fillText(l.ch, l.x, l.y);
-      });
-      ctx.globalAlpha = 1;
-      requestAnimationFrame(tick);
-    }
-    tick();
-
-    // Celebration bursts
-    function spawnBurst(symbol){
-      const c = document.createElement('canvas'); c.className='burst'; c.width=window.innerWidth; c.height=window.innerHeight; document.body.appendChild(c);
-      const cx = c.getContext('2d');
-      const P=[]; const N=40; const x = window.innerWidth/2, y = 160;
-      for(let i=0;i<N;i++){
-        const ang = (Math.PI*2)*Math.random();
-        P.push({x, y, vx: Math.cos(ang)*(1+Math.random()*3), vy: Math.sin(ang)*(1+Math.random()*3)-1, a:1, s: 14+Math.random()*10});
-      }
-      const anim = ()=>{
-        cx.clearRect(0,0,c.width,c.height);
-        P.forEach(p=>{
-          p.x += p.vx; p.y += p.vy; p.vy += 0.03; p.a -= 0.02;
-          cx.globalAlpha = Math.max(0,p.a);
-          cx.font = `${p.s}px ui-sans-serif`; cx.fillStyle = '#22d3ee';
-          cx.fillText(symbol, p.x, p.y);
-        });
-        if(P.every(p=>p.a<=0)){ c.remove(); return; }
-        requestAnimationFrame(anim);
-      };
-      anim();
-    }
-  </script>
 </body>
 </html>
+
 
