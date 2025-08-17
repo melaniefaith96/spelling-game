@@ -5,244 +5,406 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Spelling Bee</title>
 <style>
-    body {
-        font-family: Comic Sans MS, cursive, sans-serif;
-        background: linear-gradient(135deg, #ffeb99, #aee6ff);
-        color: #333;
-        height: 100vh;
-        margin: 0;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        flex-direction: column;
-    }
-    h1 {
-        margin-bottom: 10px;
-        color: #ff6600;
-        text-shadow: 1px 1px #fff;
-    }
-    select {
-        padding: 8px;
-        font-size: 18px;
-        margin-bottom: 20px;
-        border-radius: 8px;
-        border: 2px solid #ffcc00;
-        background: #fff8dc;
-        cursor: pointer;
-    }
-    .bee-container {
-        display: none; /* Hidden until grade selected */
-        text-align: center;
-        background: rgba(255,255,255,0.9);
-        padding: 25px;
-        border-radius: 16px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-        width: 300px;
-    }
-    input {
-        padding: 10px;
-        font-size: 1.1rem;
-        width: 200px;
-        text-align: center;
-        border-radius: 8px;
-        border: 2px solid #ffcc00;
-        margin-bottom: 10px;
-    }
-    button {
-        padding: 10px 18px;
-        font-size: 1rem;
-        background: #4CAF50;
-        color: #fff;
-        border: none;
-        border-radius: 8px;
-        cursor: pointer;
-    }
-    button:hover {
-        background: #45a049;
-    }
-    .stats {
-        margin-top: 15px;
-        font-size: 1rem;
-    }
-    .feedback {
-        font-size: 1.4rem;
-        margin-top: 10px;
-        font-weight: bold;
-    }
-    .yay {
-        color: #28a745;
-    }
-    .try-again {
-        color: #d9534f;
-    }
-    canvas {
-        position: fixed;
-        top: 0;
-        left: 0;
-        pointer-events: none;
-    }
+  :root{
+    --bg1:#ffecd2; /* soft peach */
+    --bg2:#a1c4fd; /* soft blue */
+    --accent:#ff8c42;
+    --accent-2:#ffd166;
+    --good:#2e7d32;
+    --bad:#d32f2f;
+  }
+
+  /* Calming animated gradient background */
+  body {
+    font-family: "Comic Sans MS", "Comic Neue", cursive, sans-serif;
+    height: 100vh;
+    margin: 0;
+    color: #333;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    background: linear-gradient(120deg, var(--bg1), var(--bg2));
+    background-size: 200% 200%;
+    animation: bgMove 12s ease-in-out infinite;
+  }
+  @keyframes bgMove {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+
+  /* Floating background shapes (clouds/bubbles) */
+  .floaters { position: fixed; inset: 0; pointer-events:none; overflow:hidden; }
+  .floater {
+    position: absolute; border-radius: 50%; opacity: .25; filter: blur(2px);
+    background: radial-gradient(circle at 30% 30%, rgba(255,255,255,.9), rgba(255,255,255,0));
+    animation: floatUp linear infinite;
+  }
+  @keyframes floatUp {
+    from { transform: translateY(0) translateX(var(--dx)); }
+    to   { transform: translateY(-120vh) translateX(calc(var(--dx) * -1)); }
+  }
+
+  h1{
+    margin: 0 0 8px; color: var(--accent); text-shadow: 1px 1px #fff; font-size: clamp(28px, 4vw, 44px);
+  }
+  .card{
+    width: min(92vw, 520px);
+    text-align: center;
+    background: rgba(255,255,255,.92);
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,.2);
+    padding: 22px 20px 26px;
+    position: relative;
+  }
+  .topbar{ display:flex; gap:8px; align-items:center; justify-content:center; flex-wrap:wrap; }
+  select, button, input{
+    font-size: 18px; border-radius: 10px; border: 2px solid var(--accent-2);
+    padding: 10px 12px; background: #fff8dc;
+  }
+  select{ cursor:pointer; }
+  button{
+    cursor:pointer; background:#4caf50; color:#fff; border: none; box-shadow: 0 3px 0 #2e7d32;
+  }
+  button.secondary{ background:#2196f3; box-shadow:0 3px 0 #1565c0; }
+  button.warn{ background:#ef5350; box-shadow:0 3px 0 #b71c1c; }
+  button:active{ transform: translateY(1px); box-shadow: 0 2px 0 rgba(0,0,0,.2); }
+
+  .bee-container{ margin-top: 14px; display:none; }
+  .input-row{ display:flex; gap:8px; justify-content:center; align-items:center; flex-wrap:wrap; }
+  #answer{ width: min(80vw, 320px); text-align:center; }
+
+  .feedback{ font-size: 1.4rem; font-weight: 800; min-height: 1.8em; margin-top: 8px; }
+  .feedback.yay{ color: var(--good); }
+  .feedback.try-again{ color: var(--bad); }
+
+  .stats{ margin-top:10px; font-size: 1rem; display:flex; gap:12px; justify-content:center; }
+  .pill{ background:#fff3cd; border:1px solid #ffe08a; border-radius: 999px; padding: 6px 10px; }
+
+  /* Confetti canvas */
+  canvas#confetti{ position: fixed; inset: 0; pointer-events:none; }
+
+  /* Screen shake celebration */
+  .shake {
+    animation: shake 0.08s linear infinite;
+  }
+  @keyframes shake {
+    0% { transform: translate(0, 0); }
+    25% { transform: translate(3px, -3px); }
+    50% { transform: translate(-3px, 3px); }
+    75% { transform: translate(3px, 3px); }
+    100% { transform: translate(-3px, -3px); }
+  }
+
+  /* Bomb (cartoon explosion) */
+  .explosion {
+    position: fixed; left:50%; top:50%; transform: translate(-50%, -50%);
+    width: 40vmin; height: 40vmin; border-radius: 50%; pointer-events:none;
+    background: radial-gradient(circle, #fffad1 0%, #ffcc00 30%, #ff6600 60%, rgba(255,0,0,0) 70%);
+    mix-blend-mode: screen; opacity: 0; scale: .2; filter: blur(1px);
+    animation: boom 900ms ease-out forwards;
+  }
+  @keyframes boom {
+    0% { opacity: 0; scale: .2; filter: blur(3px); }
+    40% { opacity: 1; scale: 1.2; }
+    100% { opacity: 0; scale: 2.1; filter: blur(8px); }
+  }
+
+  /* Mini animated bees floating around header */
+  .bee-swarm{ position:absolute; inset:0; pointer-events:none; overflow:hidden; }
+  .bee{ position:absolute; width:28px; height:28px; background: radial-gradient(circle at 40% 50%, #ffe680 0 60%, #0000 61%),
+                              linear-gradient(90deg,#333 0 20%, #ffe680 21% 40%, #333 41% 60%, #ffe680 61% 80%, #333 81% 100%);
+        border-radius: 50% 50% 40% 40%; transform: translate(-50%,-50%);
+        animation: buzz var(--t) linear infinite;
+        filter: drop-shadow(0 2px 2px rgba(0,0,0,.25)); }
+  .bee::after{ content:""; position:absolute; left:50%; top:-6px; width:18px; height:10px; transform:translateX(-50%);
+               background: radial-gradient(circle at 50% 50%, rgba(255,255,255,.8), rgba(255,255,255,0));
+               border-radius: 50% 50% 50% 50%; opacity:.8; }
+  @keyframes buzz {
+    0% { translate: -10vw 40vh; }
+    50% { translate: 10vw -20vh; }
+    100% { translate: -10vw 40vh; }
+  }
 </style>
 </head>
 <body>
+  <div class="floaters" id="floaters"></div>
 
-<h1>Spelling Bee 🐝</h1>
-<select id="gradeSel">
-    <option value="">Select Grade</option>
-    <option value="1">Grade 1</option>
-    <option value="2">Grade 2</option>
-    <option value="3">Grade 3</option>
-    <option value="4">Grade 4</option>
-    <option value="5">Grade 5</option>
-</select>
-
-<div class="bee-container" id="beeContainer">
-    <input id="answer" placeholder="Type spelling..." autocomplete="off" />
-    <br>
-    <button id="submitBtn">Submit</button>
-    <div class="feedback" id="feedback"></div>
-    <div class="stats">
-        Correct: <span id="correct">0</span> |
-        Streak: <span id="streak">0</span>
+  <div class="card" id="app">
+    <h1>Spelling Bee 🐝</h1>
+    <div class="topbar">
+      <select id="gradeSel" aria-label="Select Grade">
+        <option value="">Select Grade</option>
+      </select>
+      <button id="startBtn" class="secondary">Start</button>
+      <button id="replayBtn" title="Hear the word again">🔊 Repeat Word</button>
     </div>
-</div>
 
-<audio id="bgMusic" loop>
+    <div class="bee-container" id="beeContainer">
+      <div class="input-row">
+        <input id="answer" placeholder="Type spelling..." autocomplete="off" />
+        <button id="submitBtn">Submit</button>
+      </div>
+      <div class="feedback" id="feedback" aria-live="polite"></div>
+      <div class="stats">
+        <span class="pill">Correct: <strong id="correct">0</strong></span>
+        <span class="pill">Streak: <strong id="streak">0</strong></span>
+      </div>
+    </div>
+
+    <div class="bee-swarm" aria-hidden="true">
+      <div class="bee" style="left:14%; top:20%; --t: 18s;"></div>
+      <div class="bee" style="left:80%; top:60%; --t: 22s;"></div>
+      <div class="bee" style="left:50%; top:80%; --t: 20s;"></div>
+    </div>
+  </div>
+
+  <!-- Audio -->
+  <audio id="bgMusic" loop>
     <source src="https://cdn.pixabay.com/download/audio/2024/04/21/audio_36b773587a.mp3?filename=gentle-happy-kids-background-music-205892.mp3" type="audio/mpeg">
-</audio>
-<audio id="correctSound">
+  </audio>
+  <audio id="correctSound">
     <source src="https://cdn.pixabay.com/download/audio/2023/04/20/audio_8825c1b298.mp3?filename=kids-cheer-146777.mp3" type="audio/mpeg">
-</audio>
-<audio id="wrongSound">
+  </audio>
+  <audio id="wrongSound">
     <source src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_6dbed99bfc.mp3?filename=cartoon-fail-trumpet-146419.mp3" type="audio/mpeg">
-</audio>
+  </audio>
+  <audio id="boomSound">
+    <source src="https://cdn.pixabay.com/download/audio/2021/10/30/audio_0e3b4a8fb3.mp3?filename=explosion-6055.mp3" type="audio/mpeg">
+  </audio>
 
-<canvas id="confetti"></canvas>
+  <canvas id="confetti"></canvas>
 
 <script>
-const SAMPLE_WORDS = {
-    1: ["cat", "dog", "sun", "hat", "red", "book", "fish", "car", "run", "jump"],
-    2: ["apple", "banana", "orange", "grape", "cherry", "school", "chair", "bread", "house", "water"],
-    3: ["elephant", "giraffe", "dolphin", "kangaroo", "penguin", "computer", "pencil", "garden", "planet", "rocket"],
-    4: ["beautiful", "mountain", "holiday", "library", "science", "friendship", "dangerous", "engineer", "history", "language"],
-    5: ["extraordinary", "environment", "imagination", "universe", "adventure", "knowledge", "volunteer", "exploration", "community", "responsibility"]
+// --- Word banks for Grades 1-12 (10 per grade) ---
+const WORDS = {
+  1: ["cat","dog","sun","hat","red","book","fish","car","run","jump"],
+  2: ["apple","banana","orange","grape","cherry","school","chair","bread","house","water"],
+  3: ["elephant","giraffe","dolphin","kangaroo","penguin","computer","pencil","garden","planet","rocket"],
+  4: ["beautiful","mountain","holiday","library","science","friendship","dangerous","engineer","history","language"],
+  5: ["extraordinary","environment","imagination","universe","adventure","knowledge","volunteer","exploration","community","responsibility"],
+  6: ["biology","fraction","journal","weather","compass","parallel","gallery","orchard","oxygen","battery"],
+  7: ["algebra","ancient","chemical","decimal","ecosystem","fractional","geometry","harvest","infinite","justice"],
+  8: ["analysis","cylinder","conscious","hypothesis","maritime","narrative","parliament","quarantine","radiation","syllable"],
+  9: ["algorithm","benevolent","catastrophe","diligence","equilibrium","facilitate","gregarious","hierarchy","juxtapose","kinetic"],
+ 10: ["aberration","capricious","deference","eloquent","fortuitous","gratuitous","homogeneous","idiosyncrasy","juvenescent","kinesthesia"],
+ 11: ["anachronistic","belligerent","circumspect","disseminate","ebullient","fastidious","grandiloquent","heterogeneous","intransigent","judicious"],
+ 12: ["acquiescence","bourgeoisie","conscientious","disenfranchise","epistemology","facetious","grandiloquence","heterochromia","incontrovertible","juxtapositional"]
 };
 
-let state = { words: [], index: 0, correct: 0, streak: 0 };
-
-const gradeSel = document.getElementById("gradeSel");
-const beeContainer = document.getElementById("beeContainer");
-const answerEl = document.getElementById("answer");
-const feedbackEl = document.getElementById("feedback");
-const correctEl = document.getElementById("correct");
-const streakEl = document.getElementById("streak");
-const bgMusic = document.getElementById("bgMusic");
-const correctSound = document.getElementById("correctSound");
-const wrongSound = document.getElementById("wrongSound");
-
-gradeSel.addEventListener("change", () => {
-    const grade = gradeSel.value;
-    if (SAMPLE_WORDS[grade]) {
-        bgMusic.play();
-        state.words = SAMPLE_WORDS[grade].slice();
-        state.index = 0;
-        state.correct = 0;
-        state.streak = 0;
-        gradeSel.style.display = "none";
-        beeContainer.style.display = "block";
-        nextWord();
-    }
-});
-
-document.getElementById("submitBtn").addEventListener("click", checkWord);
-answerEl.addEventListener("keydown", e => {
-    if (e.key === "Enter") checkWord();
-});
-
-function nextWord() {
-    if (state.index >= state.words.length) {
-        state.index = 0;
-    }
-    const word = state.words[state.index];
-    speak(word);
-    answerEl.value = "";
-    feedbackEl.textContent = "";
+// Populate grade options 1-12
+const gradeSel = document.getElementById('gradeSel');
+for(let g=1; g<=12; g++){
+  const opt = document.createElement('option');
+  opt.value = String(g); opt.textContent = `Grade ${g}`; gradeSel.appendChild(opt);
 }
 
-function checkWord() {
-    const currentWord = state.words[state.index];
-    const userWord = answerEl.value.trim().toLowerCase();
-    if (userWord === currentWord.toLowerCase()) {
-        feedbackEl.textContent = "Yay! 🎉";
-        feedbackEl.className = "feedback yay";
-        correctSound.play();
-        startConfetti();
-        state.correct++;
-        state.streak++;
-    } else {
-        feedbackEl.textContent = "Try again! ❌";
-        feedbackEl.className = "feedback try-again";
-        wrongSound.play();
-        state.streak = 0;
-    }
+// State
+let state = {
+  words: [],
+  poolIndex: 0, // for words not yet missed
+  reviewQueue: [], // only wrong answers go here
+  current: '',
+  correct: 0,
+  streak: 0,
+  started: false
+};
+
+const beeContainer = document.getElementById('beeContainer');
+const answerEl = document.getElementById('answer');
+const feedbackEl = document.getElementById('feedback');
+const correctEl = document.getElementById('correct');
+const streakEl = document.getElementById('streak');
+const startBtn = document.getElementById('startBtn');
+const replayBtn = document.getElementById('replayBtn');
+
+const bgMusic = document.getElementById('bgMusic');
+const correctSound = document.getElementById('correctSound');
+const wrongSound = document.getElementById('wrongSound');
+const boomSound = document.getElementById('boomSound');
+
+bgMusic.volume = 0.35; // gentle volume
+correctSound.volume = 0.8;
+wrongSound.volume = 0.8;
+boomSound.volume = 0.9;
+
+// Utility: shuffle array
+function shuffle(arr){
+  for(let i=arr.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [arr[i],arr[j]] = [arr[j],arr[i]];
+  }
+  return arr;
+}
+
+// Speak the word using Web Speech API
+function speak(text){
+  if(!('speechSynthesis' in window)) return;
+  window.speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.rate = 0.7; // slower for kids
+  u.pitch = 1.2;
+  u.volume = 1;
+  window.speechSynthesis.speak(u);
+}
+
+// Pick the next word: prioritise reviewQueue (wrong words only)
+function getNextWord(){
+  if(state.reviewQueue.length){
+    return state.reviewQueue.shift();
+  }
+  if(state.poolIndex >= state.words.length){
+    // reshuffle base pool when finished
+    state.poolIndex = 0;
+    shuffle(state.words);
+  }
+  return state.words[state.poolIndex++];
+}
+
+function nextWord(){
+  state.current = getNextWord();
+  speak(state.current);
+  answerEl.value = '';
+  feedbackEl.textContent = '';
+  feedbackEl.className = 'feedback';
+  answerEl.focus();
+}
+
+function startGame(){
+  const grade = gradeSel.value;
+  if(!grade) { alert('Please pick a grade'); return; }
+  state.started = true;
+  state.words = shuffle([...WORDS[grade]]);
+  state.poolIndex = 0;
+  state.reviewQueue = [];
+  state.correct = 0;
+  state.streak = 0;
+
+  // show UI
+  beeContainer.style.display = 'block';
+
+  // Try to start background music on user gesture
+  bgMusic.play().catch(()=>{});
+
+  nextWord();
+}
+
+function celebrateIfNeeded(){
+  if(state.streak > 0 && state.streak % 10 === 0){
+    // Screen shake for 5 seconds
+    document.body.classList.add('shake');
+    setTimeout(()=>document.body.classList.remove('shake'), 5000);
+
+    // Bomb explosion visual + sound
+    const boom = document.createElement('div');
+    boom.className = 'explosion';
+    document.body.appendChild(boom);
+    boomSound.currentTime = 0; boomSound.play().catch(()=>{});
+    setTimeout(()=>boom.remove(), 1000);
+  }
+}
+
+function handleSubmit(){
+  const userWord = answerEl.value.trim().toLowerCase();
+  const current = (state.current||'').toLowerCase();
+  if(!current) return;
+
+  if(userWord === current){
+    // CORRECT
+    feedbackEl.textContent = 'Yay! 🎉';
+    feedbackEl.className = 'feedback yay';
+    correctSound.currentTime = 0; correctSound.play().catch(()=>{});
+    startConfetti();
+    state.correct++;
+    state.streak++;
     correctEl.textContent = state.correct;
     streakEl.textContent = state.streak;
-    state.index++;
-    setTimeout(nextWord, 2000);
-}
 
-function speak(text) {
-    if ('speechSynthesis' in window) {
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.rate = 0.7; // slower for kids
-        utterance.pitch = 1.2; // friendlier tone
-        window.speechSynthesis.speak(utterance);
+    celebrateIfNeeded();
+
+    setTimeout(nextWord, 1200);
+  } else {
+    // WRONG
+    feedbackEl.textContent = 'Try again! ❌';
+    feedbackEl.className = 'feedback try-again';
+    wrongSound.currentTime = 0; wrongSound.play().catch(()=>{});
+
+    // Add to review queue if not already queued to avoid duplicates
+    if(!state.reviewQueue.includes(state.current)){
+      state.reviewQueue.push(state.current);
     }
+
+    state.streak = 0;
+    streakEl.textContent = state.streak;
+
+    // Move on to the next word after a short pause
+    setTimeout(nextWord, 1200);
+  }
 }
 
-// 🎉 Confetti Animation
+// --- Confetti ---
 const canvas = document.getElementById('confetti');
 const ctx = canvas.getContext('2d');
 let confettiParticles = [];
 
-function resizeCanvas() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-}
-window.addEventListener('resize', resizeCanvas);
-resizeCanvas();
+function resizeCanvas(){ canvas.width = innerWidth; canvas.height = innerHeight; }
+addEventListener('resize', resizeCanvas); resizeCanvas();
 
-function startConfetti() {
-    confettiParticles = [];
-    for (let i = 0; i < 100; i++) {
-        confettiParticles.push({
-            x: Math.random() * canvas.width,
-            y: Math.random() * canvas.height - canvas.height,
-            r: Math.random() * 6 + 2,
-            d: Math.random() * 0.5 + 1,
-            color: `hsl(${Math.random() * 360}, 100%, 50%)`,
-            tilt: Math.random() * 10 - 10
-        });
-    }
-    requestAnimationFrame(drawConfetti);
-    setTimeout(() => confettiParticles = [], 1500);
-}
-
-function drawConfetti() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    confettiParticles.forEach(p => {
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-        ctx.fillStyle = p.color;
-        ctx.fill();
-        p.y += p.d * 4;
-        p.x += Math.sin(p.tilt) * 2;
-        p.tilt += 0.05;
+function startConfetti(){
+  confettiParticles = [];
+  for(let i=0;i<140;i++){
+    confettiParticles.push({
+      x: Math.random()*canvas.width,
+      y: -20 - Math.random()*canvas.height,
+      r: Math.random()*6 + 2,
+      d: Math.random()*0.7 + 0.6,
+      color: `hsl(${Math.random()*360},100%,50%)`,
+      t: Math.random()*Math.PI*2
     });
-    if (confettiParticles.length) requestAnimationFrame(drawConfetti);
+  }
+  requestAnimationFrame(drawConfetti);
+  setTimeout(()=>confettiParticles = [], 1500);
 }
-</script>
 
+function drawConfetti(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  for(const p of confettiParticles){
+    ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fillStyle=p.color; ctx.fill();
+    p.y += p.d*4; p.x += Math.sin(p.t)*2; p.t += 0.05;
+  }
+  if(confettiParticles.length) requestAnimationFrame(drawConfetti);
+}
+
+// Generate background floaters
+(function makeFloaters(){
+  const wrap = document.getElementById('floaters');
+  for(let i=0;i<18;i++){
+    const f = document.createElement('div');
+    f.className = 'floater';
+    const size = Math.random()*120 + 40; // 40-160
+    f.style.width = size+'px'; f.style.height=size+'px';
+    f.style.left = Math.random()*100 + 'vw';
+    f.style.top = Math.random()*100 + 'vh';
+    f.style.setProperty('--dx', (Math.random()*60-30) + 'px');
+    const dur = Math.random()*20 + 14; // 14-34s
+    f.style.animationDuration = dur+'s';
+    wrap.appendChild(f);
+  }
+})();
+
+// Events
+startBtn.addEventListener('click', startGame);
+
+document.getElementById('submitBtn').addEventListener('click', handleSubmit);
+answerEl.addEventListener('keydown', e=>{ if(e.key==='Enter') handleSubmit(); });
+replayBtn.addEventListener('click', ()=>{ if(state.current) speak(state.current); });
+
+// Also start music when a grade is picked (user gesture friendly)
+gradeSel.addEventListener('change', ()=>{ bgMusic.play().catch(()=>{}); });
+
+</script>
 </body>
 </html>
+
 
 
