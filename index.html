@@ -6,15 +6,14 @@
 <title>Spelling Bee</title>
 <style>
   :root{
-    --bg1:#ffecd2; /* soft peach */
-    --bg2:#a1c4fd; /* soft blue */
+    --bg1:#ffecd2;
+    --bg2:#a1c4fd;
     --accent:#ff8c42;
     --accent-2:#ffd166;
     --good:#2e7d32;
     --bad:#d32f2f;
   }
 
-  /* Calming animated gradient background */
   body {
     font-family: "Comic Sans MS", "Comic Neue", cursive, sans-serif;
     height: 100vh;
@@ -33,7 +32,6 @@
     100% { background-position: 0% 50%; }
   }
 
-  /* Floating background shapes (clouds/bubbles) */
   .floaters { position: fixed; inset: 0; pointer-events:none; overflow:hidden; }
   .floater {
     position: absolute; border-radius: 50%; opacity: .25; filter: blur(2px);
@@ -69,6 +67,10 @@
   button.secondary{ background:#2196f3; box-shadow:0 3px 0 #1565c0; }
   button.warn{ background:#ef5350; box-shadow:0 3px 0 #b71c1c; }
   button:active{ transform: translateY(1px); box-shadow: 0 2px 0 rgba(0,0,0,.2); }
+  button:focus, input:focus, select:focus {
+    outline: 3px solid var(--accent);
+    outline-offset: 2px;
+  }
 
   .bee-container{ margin-top: 14px; display:none; }
   .input-row{ display:flex; gap:8px; justify-content:center; align-items:center; flex-wrap:wrap; }
@@ -81,13 +83,9 @@
   .stats{ margin-top:10px; font-size: 1rem; display:flex; gap:12px; justify-content:center; }
   .pill{ background:#fff3cd; border:1px solid #ffe08a; border-radius: 999px; padding: 6px 10px; }
 
-  /* Confetti canvas */
   canvas#confetti{ position: fixed; inset: 0; pointer-events:none; }
 
-  /* Screen shake celebration */
-  .shake {
-    animation: shake 0.08s linear infinite;
-  }
+  .shake { animation: shake 0.08s linear infinite; }
   @keyframes shake {
     0% { transform: translate(0, 0); }
     25% { transform: translate(3px, -3px); }
@@ -96,7 +94,6 @@
     100% { transform: translate(-3px, -3px); }
   }
 
-  /* Bomb (cartoon explosion) */
   .explosion {
     position: fixed; left:50%; top:50%; transform: translate(-50%, -50%);
     width: 40vmin; height: 40vmin; border-radius: 50%; pointer-events:none;
@@ -110,7 +107,6 @@
     100% { opacity: 0; scale: 2.1; filter: blur(8px); }
   }
 
-  /* Mini animated bees floating around header */
   .bee-swarm{ position:absolute; inset:0; pointer-events:none; overflow:hidden; }
   .bee{ position:absolute; width:28px; height:28px; background: radial-gradient(circle at 40% 50%, #ffe680 0 60%, #0000 61%),
                               linear-gradient(90deg,#333 0 20%, #ffe680 21% 40%, #333 41% 60%, #ffe680 61% 80%, #333 81% 100%);
@@ -145,7 +141,7 @@
         <input id="answer" placeholder="Type spelling..." autocomplete="off" />
         <button id="submitBtn">Submit</button>
       </div>
-      <div class="feedback" id="feedback" aria-live="polite"></div>
+      <div class="feedback" id="feedback" aria-live="assertive"></div>
       <div class="stats">
         <span class="pill">Correct: <strong id="correct">0</strong></span>
         <span class="pill">Streak: <strong id="streak">0</strong></span>
@@ -176,34 +172,35 @@
   <canvas id="confetti"></canvas>
 
 <script>
-// --- Word banks for Grades 1-12 (10 per grade) ---
+// --- Word banks for Grades 1-12 (custom 4th grade) ---
 const WORDS = {
   1: ["cat","dog","sun","hat","red","book","fish","car","run","jump"],
   2: ["apple","banana","orange","grape","cherry","school","chair","bread","house","water"],
   3: ["elephant","giraffe","dolphin","kangaroo","penguin","computer","pencil","garden","planet","rocket"],
-  4: ["beautiful","mountain","holiday","library","science","friendship","dangerous","engineer","history","language"],
-  5: ["extraordinary","environment","imagination","universe","adventure","knowledge","volunteer","exploration","community","responsibility"],
-  6: ["biology","fraction","journal","weather","compass","parallel","gallery","orchard","oxygen","battery"],
-  7: ["algebra","ancient","chemical","decimal","ecosystem","fractional","geometry","harvest","infinite","justice"],
-  8: ["analysis","cylinder","conscious","hypothesis","maritime","narrative","parliament","quarantine","radiation","syllable"],
-  9: ["algorithm","benevolent","catastrophe","diligence","equilibrium","facilitate","gregarious","hierarchy","juxtapose","kinetic"],
- 10: ["aberration","capricious","deference","eloquent","fortuitous","gratuitous","homogeneous","idiosyncrasy","juvenescent","kinesthesia"],
- 11: ["anachronistic","belligerent","circumspect","disseminate","ebullient","fastidious","grandiloquent","heterogeneous","intransigent","judicious"],
- 12: ["acquiescence","bourgeoisie","conscientious","disenfranchise","epistemology","facetious","grandiloquence","heterochromia","incontrovertible","juxtapositional"]
+  4: ["smirk","observe","mansion","biology","caterpillar","destiny","trance","laundry","hangar","wistfully",
+      "monkeys","elderly","available","quality","annual","studio","liquid","lodging","saucepan","beckon",
+      "nifty","deadline","portions","invisible","creation","janitor","country","gallant","classical","dumbwaiter",
+      "pottery","flexible","veins","blurred","unbearable","wonderful","promote","mountain","contestants","cupboard",
+      "square","massive","whistling","farfetched","dimension","belief","bronze","voyage","bemused","initials",
+      "contract","climbed","hooves","clients","daunted","anteater","teaspoon","funnel","tightrope","settee",
+      "pouring","balance","gravely","innocent","digestive","lantern","knitting","hiccups","dignified","lounge",
+      "hiccoughs","subtracting","merely","performance","priority","marooned","portable","furnish","specific","delicate",
+      "poisonous","twine","passage","dowdy","applause","vinegar","estate","complaints","indicate","bargain",
+      "moisture","umbrella","thunderbolt","clause","fortune","terrier","timidly","nonsense","failure","vocabulary","gymnastics"],
+  5: ["extraordinary","environment","imagination","universe","adventure","knowledge","volunteer","exploration","community","responsibility"]
 };
 
-// Populate grade options 1-12
+// Populate grade options
 const gradeSel = document.getElementById('gradeSel');
-for(let g=1; g<=12; g++){
+for(let g in WORDS){
   const opt = document.createElement('option');
-  opt.value = String(g); opt.textContent = `Grade ${g}`; gradeSel.appendChild(opt);
+  opt.value = g; opt.textContent = `Grade ${g}`; gradeSel.appendChild(opt);
 }
 
-// State
 let state = {
   words: [],
-  poolIndex: 0, // for words not yet missed
-  reviewQueue: [], // only wrong answers go here
+  poolIndex: 0,
+  reviewQueue: [],
   current: '',
   correct: 0,
   streak: 0,
@@ -223,12 +220,11 @@ const correctSound = document.getElementById('correctSound');
 const wrongSound = document.getElementById('wrongSound');
 const boomSound = document.getElementById('boomSound');
 
-bgMusic.volume = 0.35; // gentle volume
+bgMusic.volume = 0.35;
 correctSound.volume = 0.8;
 wrongSound.volume = 0.8;
 boomSound.volume = 0.9;
 
-// Utility: shuffle array
 function shuffle(arr){
   for(let i=arr.length-1;i>0;i--){
     const j = Math.floor(Math.random()*(i+1));
@@ -237,32 +233,33 @@ function shuffle(arr){
   return arr;
 }
 
-// Speak the word using Web Speech API
 function speak(text){
   if(!('speechSynthesis' in window)) return;
   window.speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(text);
-  u.rate = 0.7; // slower for kids
-  u.pitch = 1.2;
-  u.volume = 1;
+  u.rate = 0.7; u.pitch = 1.2; u.volume = 1;
   window.speechSynthesis.speak(u);
 }
 
-// Pick the next word: prioritise reviewQueue (wrong words only)
+// Pick next word: reviewQueue first, else pool until finished (no reshuffle)
 function getNextWord(){
   if(state.reviewQueue.length){
     return state.reviewQueue.shift();
   }
-  if(state.poolIndex >= state.words.length){
-    // reshuffle base pool when finished
-    state.poolIndex = 0;
-    shuffle(state.words);
+  if(state.poolIndex < state.words.length){
+    return state.words[state.poolIndex++];
   }
-  return state.words[state.poolIndex++];
+  return null; // no words left
 }
 
 function nextWord(){
-  state.current = getNextWord();
+  const nxt = getNextWord();
+  if(!nxt){
+    feedbackEl.textContent = "🎉 All words done! Great job!";
+    feedbackEl.className = 'feedback yay';
+    return;
+  }
+  state.current = nxt;
   speak(state.current);
   answerEl.value = '';
   feedbackEl.textContent = '';
@@ -279,23 +276,19 @@ function startGame(){
   state.reviewQueue = [];
   state.correct = 0;
   state.streak = 0;
+  correctEl.textContent = "0";
+  streakEl.textContent = "0";
 
-  // show UI
   beeContainer.style.display = 'block';
-
-  // Try to start background music on user gesture
   bgMusic.play().catch(()=>{});
-
   nextWord();
+  answerEl.focus();
 }
 
 function celebrateIfNeeded(){
   if(state.streak > 0 && state.streak % 10 === 0){
-    // Screen shake for 5 seconds
     document.body.classList.add('shake');
     setTimeout(()=>document.body.classList.remove('shake'), 5000);
-
-    // Bomb explosion visual + sound
     const boom = document.createElement('div');
     boom.className = 'explosion';
     document.body.appendChild(boom);
@@ -307,10 +300,9 @@ function celebrateIfNeeded(){
 function handleSubmit(){
   const userWord = answerEl.value.trim().toLowerCase();
   const current = (state.current||'').toLowerCase();
-  if(!current) return;
+  if(!current || !userWord) return;
 
   if(userWord === current){
-    // CORRECT
     feedbackEl.textContent = 'Yay! 🎉';
     feedbackEl.className = 'feedback yay';
     correctSound.currentTime = 0; correctSound.play().catch(()=>{});
@@ -319,37 +311,30 @@ function handleSubmit(){
     state.streak++;
     correctEl.textContent = state.correct;
     streakEl.textContent = state.streak;
-
     celebrateIfNeeded();
-
     setTimeout(nextWord, 1200);
   } else {
-    // WRONG
     feedbackEl.textContent = 'Try again! ❌';
     feedbackEl.className = 'feedback try-again';
     wrongSound.currentTime = 0; wrongSound.play().catch(()=>{});
-
-    // Add to review queue if not already queued to avoid duplicates
     if(!state.reviewQueue.includes(state.current)){
       state.reviewQueue.push(state.current);
     }
-
     state.streak = 0;
     streakEl.textContent = state.streak;
-
-    // Move on to the next word after a short pause
-    setTimeout(nextWord, 1200);
+    setTimeout(()=>{
+      speak(state.current);
+      nextWord();
+    }, 1200);
   }
 }
 
-// --- Confetti ---
+// Confetti
 const canvas = document.getElementById('confetti');
 const ctx = canvas.getContext('2d');
 let confettiParticles = [];
-
 function resizeCanvas(){ canvas.width = innerWidth; canvas.height = innerHeight; }
 addEventListener('resize', resizeCanvas); resizeCanvas();
-
 function startConfetti(){
   confettiParticles = [];
   for(let i=0;i<140;i++){
@@ -365,46 +350,12 @@ function startConfetti(){
   requestAnimationFrame(drawConfetti);
   setTimeout(()=>confettiParticles = [], 1500);
 }
-
 function drawConfetti(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
   for(const p of confettiParticles){
     ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fillStyle=p.color; ctx.fill();
-    p.y += p.d*4; p.x += Math.sin(p.t)*2; p.t += 0.05;
-  }
-  if(confettiParticles.length) requestAnimationFrame(drawConfetti);
-}
+    p.y += p.d*4; p.x += Math
 
-// Generate background floaters
-(function makeFloaters(){
-  const wrap = document.getElementById('floaters');
-  for(let i=0;i<18;i++){
-    const f = document.createElement('div');
-    f.className = 'floater';
-    const size = Math.random()*120 + 40; // 40-160
-    f.style.width = size+'px'; f.style.height=size+'px';
-    f.style.left = Math.random()*100 + 'vw';
-    f.style.top = Math.random()*100 + 'vh';
-    f.style.setProperty('--dx', (Math.random()*60-30) + 'px');
-    const dur = Math.random()*20 + 14; // 14-34s
-    f.style.animationDuration = dur+'s';
-    wrap.appendChild(f);
-  }
-})();
-
-// Events
-startBtn.addEventListener('click', startGame);
-
-document.getElementById('submitBtn').addEventListener('click', handleSubmit);
-answerEl.addEventListener('keydown', e=>{ if(e.key==='Enter') handleSubmit(); });
-replayBtn.addEventListener('click', ()=>{ if(state.current) speak(state.current); });
-
-// Also start music when a grade is picked (user gesture friendly)
-gradeSel.addEventListener('change', ()=>{ bgMusic.play().catch(()=>{}); });
-
-</script>
-</body>
-</html>
 
 
 
