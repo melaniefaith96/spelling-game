@@ -67,15 +67,16 @@
       <option value="">Select Grade</option>
     </select>
     <button id="startBtn" class="secondary">Start</button>
-    <button id="replayBtn">🔊 Repeat Word</button>
+    <button id="replayBtn" aria-label="Repeat Word">🔊 Repeat Word</button>
   </div>
 
   <div class="bee-container" id="beeContainer">
     <div class="input-row">
-      <input id="answer" placeholder="Type spelling..." autocomplete="off" />
+      <input id="answer" placeholder="Type spelling..." autocomplete="off" 
+             autocapitalize="off" inputmode="latin" />
       <button id="submitBtn">Submit</button>
     </div>
-    <div class="feedback" id="feedback" aria-live="assertive"></div>
+    <div class="feedback" id="feedback" aria-live="polite"></div>
     <div class="stats">
       <span class="pill">Correct: <strong id="correct">0</strong></span>
       <span class="pill">Streak: <strong id="streak">0</strong></span>
@@ -95,11 +96,11 @@ const WORDS = {
   1: ["cat","dog","sun","hat","red","book","fish","car","run","jump"],
   2: ["apple","banana","orange","grape","cherry","school","chair","bread","house","water"],
   3: ["elephant","giraffe","dolphin","kangaroo","penguin","computer","pencil","garden","planet","rocket"],
-  4: ["smirk","observe","mansion","biology","caterpillar","destiny","trance","laundry","hangar","wistfully",
-      "monkeys","elderly","available","quality","annual","studio","liquid","lodging","saucepan","beckon",
-      "nifty","deadline","portions","invisible","creation","janitor","country","gallant","classical","dumbwaiter",
-      "pottery","flexible","veins","blurred","unbearable","wonderful","promote","mountain","contestants","cupboard",
-      "square","massive","whistling","farfetched","dimension","belief","bronze","voyage","bemused","initials"],
+  4: [
+    "October","Wednesday","Thursday","December","January","February","calendar",
+    "Monday","March","Sunday","Friday","Saturday","September","Tuesday",
+    "August","April","June","May","July"
+  ],
   5: ["extraordinary","environment","imagination","universe","adventure","knowledge","volunteer","exploration","community","responsibility"]
 };
 
@@ -130,11 +131,35 @@ bgMusic.volume = 0.35; correctSound.volume=0.8; wrongSound.volume=0.8; boomSound
 function shuffle(arr){ for(let i=arr.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; } return arr; }
 
 // Speech
-function speak(text){ if(!('speechSynthesis' in window)) return; window.speechSynthesis.cancel(); let u=new SpeechSynthesisUtterance(text); u.rate=0.7; u.pitch=1.2; window.speechSynthesis.speak(u); }
+function speak(text){ 
+  if(!('speechSynthesis' in window)) return; 
+  window.speechSynthesis.cancel(); 
+  let u=new SpeechSynthesisUtterance(text); 
+  u.rate=0.7; u.pitch=1.2; 
+  window.speechSynthesis.speak(u); 
+}
 
 // Next word
-function getNextWord(){ if(state.reviewQueue.length) return state.reviewQueue.shift(); if(state.poolIndex<state.words.length) return state.words[state.poolIndex++]; return null; }
-function nextWord(){ const nxt=getNextWord(); if(!nxt){ feedbackEl.textContent="🎉 All words done! Great job!"; feedbackEl.className='feedback yay'; return; } state.current=nxt; speak(state.current); answerEl.value=''; feedbackEl.textContent=''; feedbackEl.className='feedback'; answerEl.focus(); }
+function getNextWord(){ 
+  if(state.reviewQueue.length) return state.reviewQueue.shift(); 
+  if(state.poolIndex<state.words.length) return state.words[state.poolIndex++]; 
+  return null; 
+}
+function nextWord(){ 
+  const nxt=getNextWord(); 
+  if(!nxt){ 
+    feedbackEl.textContent="🎉 All words done! Great job!"; 
+    feedbackEl.className='feedback yay'; 
+    startConfetti();
+    return; 
+  } 
+  state.current=nxt; 
+  speak(state.current); 
+  answerEl.value=''; 
+  feedbackEl.textContent=''; 
+  feedbackEl.className='feedback'; 
+  answerEl.focus(); 
+}
 
 // Start game
 function startGame(){ 
@@ -142,7 +167,10 @@ function startGame(){
   if(!grade){ alert('Please pick a grade'); return; }
   state.started=true; state.words=shuffle([...WORDS[grade]]); state.poolIndex=0; state.reviewQueue=[]; state.correct=0; state.streak=0;
   correctEl.textContent='0'; streakEl.textContent='0';
-  beeContainer.style.display='block'; bgMusic.play().catch(()=>{}); nextWord();
+  beeContainer.style.display='block'; 
+  if(!bgMusic.paused){ bgMusic.currentTime=0; } 
+  bgMusic.play().catch(()=>{}); 
+  nextWord();
 }
 startBtn.addEventListener('click', startGame);
 
@@ -176,10 +204,8 @@ function handleSubmit(){
 
 // Celebration
 function celebrate(){
-  const boom=document.createElement('div'); boom.className='explosion';
-  document.body.appendChild(boom);
   boomSound.currentTime=0; boomSound.play().catch(()=>{});
-  setTimeout(()=>boom.remove(),1000);
+  startConfetti();
 }
 
 // Confetti canvas
@@ -188,11 +214,35 @@ const ctx=canvas.getContext('2d');
 let confettiParticles=[];
 function resizeCanvas(){ canvas.width=innerWidth; canvas.height=innerHeight; }
 addEventListener('resize', resizeCanvas); resizeCanvas();
-function startConfetti(){ confettiParticles=[]; for(let i=0;i<140;i++){ confettiParticles.push({x:Math.random()*canvas.width,y:-20-Math.random()*canvas.height,r:Math.random()*6+2,d:Math.random()*0.7+0.6,color:`hsl(${Math.random()*360},100%,50%)`}); } requestAnimationFrame(drawConfetti); setTimeout(()=>confettiParticles=[],1500); }
-function drawConfetti(){ ctx.clearRect(0,0,canvas.width,canvas.height); for(const p of confettiParticles){ ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fillStyle=p.color; ctx.fill(); p.y+=p.d*4; } if(confettiParticles.length) requestAnimationFrame(drawConfetti); }
+function startConfetti(){ 
+  confettiParticles=[]; 
+  for(let i=0;i<140;i++){ 
+    confettiParticles.push({
+      x:Math.random()*canvas.width,
+      y:-20-Math.random()*canvas.height,
+      r:Math.random()*6+2,
+      d:Math.random()*0.7+0.6,
+      color:`hsl(${Math.random()*360},100%,50%)`
+    }); 
+  } 
+  requestAnimationFrame(drawConfetti); 
+  setTimeout(()=>confettiParticles=[],2000); 
+}
+function drawConfetti(){ 
+  ctx.clearRect(0,0,canvas.width,canvas.height); 
+  for(const p of confettiParticles){ 
+    ctx.beginPath(); 
+    ctx.arc(p.x,p.y,p.r,0,Math.PI*2); 
+    ctx.fillStyle=p.color; 
+    ctx.fill(); 
+    p.y+=p.d*4; 
+  } 
+  if(confettiParticles.length) requestAnimationFrame(drawConfetti); 
+}
 </script>
 </body>
 </html>
+
 
 
 
