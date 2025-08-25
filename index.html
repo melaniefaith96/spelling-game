@@ -78,6 +78,9 @@ canvas#confetti{ position: fixed; inset: 0; pointer-events:none; }
     <select id="gradeSel" aria-label="Select Grade">
       <option value="">Select Grade</option>
     </select>
+    <select id="voiceSel" aria-label="Select Voice">
+      <option value="">Default Voice</option>
+    </select>
     <button id="startBtn">Start</button>
     <button id="replayBtn">🔊 Repeat Word</button>
   </div>
@@ -117,6 +120,7 @@ const WORDS = {
 
 // -------- DOM --------
 const gradeSel = document.getElementById('gradeSel');
+const voiceSel = document.getElementById('voiceSel');
 const beeContainer = document.getElementById('beeContainer');
 const answerEl = document.getElementById('answer');
 const feedbackEl = document.getElementById('feedback');
@@ -135,10 +139,51 @@ bgMusic.volume = 0.35; correctSound.volume=0.8; wrongSound.volume=0.8; boomSound
 
 // -------- State --------
 let state = { words: [], poolIndex:0, reviewQueue:[], current:'', correct:0, streak:0, started:false };
+let availableVoices = [];
+let selectedVoice = null;
 
 // -------- Utils --------
 function shuffle(arr){ for(let i=arr.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; } return arr; }
-function speak(text){ if(!('speechSynthesis' in window)) return; window.speechSynthesis.cancel(); window.speechSynthesis.speak(new SpeechSynthesisUtterance(text)); }
+
+// Populate voices dropdown
+function populateVoices() {
+  availableVoices = window.speechSynthesis.getVoices();
+  voiceSel.innerHTML = '<option value="">Default Voice</option>';
+  availableVoices.forEach((v, i) => {
+    const opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = `${v.name} (${v.lang})`;
+    voiceSel.appendChild(opt);
+  });
+}
+window.speechSynthesis.onvoiceschanged = populateVoices;
+populateVoices();
+
+// Change selected voice
+voiceSel.addEventListener('change', () => {
+  const idx = parseInt(voiceSel.value);
+  selectedVoice = isNaN(idx) ? null : availableVoices[idx];
+});
+
+function speak(text){
+  if(!('speechSynthesis' in window)) return;
+  window.speechSynthesis.cancel();
+  const utter = new SpeechSynthesisUtterance(text);
+
+  if (selectedVoice) {
+    utter.voice = selectedVoice;
+  } else {
+    // Pick a fun default if available
+    const funny = availableVoices.find(v =>
+      /Fred|Google UK English Male|Daniel|Albert/i.test(v.name)
+    );
+    if (funny) utter.voice = funny;
+    utter.pitch = 1.5;
+    utter.rate = 0.95;
+  }
+
+  window.speechSynthesis.speak(utter);
+}
 
 function getNextWord(){
   if(state.reviewQueue.length) return state.reviewQueue.shift();
@@ -210,7 +255,6 @@ function handleSubmit(){
     let highScore = parseInt(localStorage.getItem('highScore')||0);
     if(state.correct>highScore){ localStorage.setItem('highScore',state.correct); highScoreEl.textContent = state.correct; }
 
-    // Celebrate every 5
     if(state.streak>0 && state.streak%5===0){ celebrate(); }
 
     nextWord();
@@ -271,12 +315,3 @@ function celebrate(){ boomSound.currentTime=0; boomSound.play().catch(()=>{}); s
 </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
